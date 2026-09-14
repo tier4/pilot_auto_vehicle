@@ -8,12 +8,14 @@ This branch only holds the mirror configuration and its tooling. See the mirror 
 
 | Branch | Contents |
 | --- | --- |
-| `awf-latest/universe` | `autowarefoundation/autoware_universe:main`, `vehicle/` |
+| `awf-latest` | `autowarefoundation/autoware_universe:main`, `vehicle/` |
 | `feat/v0.64/e2e` | `tier4/autoware_universe:feat/v0.64/e2e`, the same paths as the universe mirror |
 
-The upstream mirrors live under the `awf-latest/` namespace. Note that git cannot
-hold a branch named `awf-latest` at the same time as `awf-latest/*`, so the old
-flat branch has to be deleted before these can be created.
+The mirror branches keep the flat names the previous workflows used, so nothing
+that already points at `awf-latest` has to move. Grouping them under an
+`awf-latest/` namespace would read better but would require deleting the
+existing `awf-latest` branch first, which the organisation rulesets do not
+permit here.
 
 ### How it works
 
@@ -29,32 +31,32 @@ The pipeline has two stages:
    `git-filter-repo` with arguments generated from the configuration, then
    pushes the result to that source's `mirror_branch`.
 2. **Combine.** `tools/mirror.py combine TARGET` reads the mirror branches that
-   stage 1 published and replays them into a single linear history ordered by
-   committer date. It never clones an upstream, so the combined branch cannot
-   disagree with the per-source mirrors.
+   stage 1 published and appends any not-yet-reflected member commits onto the
+   already published combined tip (or builds from scratch on first publish).
+   It never clones an upstream, so the combined branch cannot disagree with the
+   per-source mirrors.
 
-### Determinism
+### Determinism and publishing
 
-Both stages are pure functions of `(upstream commit, .sync/sources.yaml)`:
+Per-source mirrors are pure functions of `(upstream commit, .sync/sources.yaml)`:
 
 - `git-filter-repo` rewrites a given history the same way every time. The
   version is pinned in the workflow, because a different version may rewrite
   differently.
-- The combiner synthesises nothing. Every replayed commit keeps its original
-  author, committer, timestamps and message; only its parent is rewritten, and
-  its tree is recomposed from the current state of each member. No wall-clock
-  value ever reaches an object.
+- The same upstream tip therefore republishes as a fast-forward. A failed push
+  means reproducibility was lost.
 
-This is checked rather than assumed:
+The combined branch is the pure function
+`f(published tip, member tips)`:
 
-- `tools/mirror.py combine --verify` rebuilds the branch from scratch a second
-  time and fails unless both builds produce the same commit id. The scheduled
-  workflow always passes `--verify`.
-- Every push reports whether the previously published tip is still an ancestor
-  of the new one. A fast-forward means the contract held; anything else is
-  reported as a rewrite.
-- `awf-latest/universe` is pushed without `--force` on purpose, so losing
-  reproducibility there fails the job instead of silently republishing.
+- Member commits not yet reflected in the published tip are appended onto it.
+  The resume point is recovered from the tip tree (each member's renamed
+  subtree oids). No sidecar ref is required.
+- Same published tip plus same member tips always yield the same commit ids, so
+  the push is a fast-forward (or unchanged).
+- `tools/mirror.py combine --verify` checks that the tip tree matches what the
+  current member tips compose to, and that a second build from the same inputs
+  reproduces the commit id. The scheduled workflow always passes `--verify`.
 
 ### Working on the configuration
 
