@@ -11,17 +11,19 @@
 #
 # Determinism contract
 # --------------------
-# Both stages below are pure functions of (upstream commit, this file):
+# Per-source mirrors are pure functions of (upstream commit, this file):
 #
-#   1. git-filter-repo rewrites each upstream history. Same input plus same
-#      arguments always yields the same commit ids.
-#   2. tools/combine_history.py replays the filtered histories into one linear
-#      branch. Every replayed commit keeps its original author, committer,
-#      timestamps and message; only its parent is rewritten and its tree is
-#      recomposed. No commit is synthesised, so no wall-clock value ever enters
-#      an object.
+#   git-filter-repo rewrites each upstream history. Same input plus same
+#   arguments always yields the same commit ids, so those branches publish as
+#   fast-forwards. A failed push means reproducibility was lost.
 #
-# Rebuilding from scratch therefore reproduces the published branches exactly.
+# The combined branch is the pure function f(published tip, member tips):
+#
+#   Member commits not yet reflected in the published tip are replayed on top
+#   of it. Resume position is recovered from the tip tree (renamed subtree
+#   oids). Same tip plus same members always yield the same commit ids, so the
+#   push is a fast-forward (or a no-op). --verify checks both the tip tree
+#   against the member tips and that a second build reproduces the commit id.
 
 version: 1
 
@@ -29,10 +31,9 @@ sources:
   autoware_universe:
     upstream: https://github.com/autowarefoundation/autoware_universe.git
     ref: main
-    mirror_branch: awf-latest/universe
-    # Kept non-forced on purpose: a failed push is the alarm that tells us the
-    # filtered history stopped being reproducible.
-    force: false
+    # Flat name kept: awf-latest/universe cannot coexist with the existing
+    # awf-latest branch, and deleting it is refused by the organisation rulesets.
+    mirror_branch: awf-latest
     paths:
       - path: vehicle/
       - path: .github/
@@ -46,7 +47,6 @@ sources:
     upstream: https://github.com/tier4/autoware_universe.git
     ref: feat/v0.64/e2e
     mirror_branch: feat/v0.64/e2e
-    force: true
     paths:
       - path: vehicle/
       - path: .github/
