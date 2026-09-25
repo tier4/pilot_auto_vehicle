@@ -9,7 +9,21 @@ This branch only holds the mirror configuration and its tooling. See the mirror 
 | Branch | Contents |
 | --- | --- |
 | `awf-latest` | `autowarefoundation/autoware_universe:main`, `vehicle/` |
+| `awf-core-latest` | `autowarefoundation/autoware_core:main`, `vehicle/` |
+| `awf-combined-latest` | the two AWF mirrors above replayed into one linear history |
 | `feat/v0.64/e2e` | `tier4/autoware_universe:feat/v0.64/e2e`, the same paths as the universe mirror |
+
+In the combined branch each member is filed under the name of its upstream,
+which keeps the two histories out of one another's directories and makes
+provenance visible in the path. Everything else at the root comes from
+`autoware_universe`.
+
+```text
+awf-combined-latest/
+├── universe/vehicle/
+├── core/vehicle/
+└── .github/  docs/  LICENSE  NOTICE  README.md  ...
+```
 
 The mirror branches keep the flat names the previous workflows used, so nothing
 that already points at `awf-latest` has to move. Grouping them under an
