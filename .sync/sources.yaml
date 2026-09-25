@@ -43,6 +43,16 @@ sources:
       - pattern: '#(\d+)'
         replacement: autowarefoundation/autoware_universe#\1
 
+  autoware_core:
+    upstream: https://github.com/autowarefoundation/autoware_core.git
+    ref: main
+    mirror_branch: awf-core-latest
+    paths:
+      - path: vehicle/
+    message_rules:
+      - pattern: '#(\d+)'
+        replacement: autowarefoundation/autoware_core#\1
+
   tier4_universe_e2e:
     upstream: https://github.com/tier4/autoware_universe.git
     ref: feat/v0.64/e2e
@@ -61,3 +71,22 @@ sources:
       - since: 2026-02-21T00:00:00Z
         pattern: (?<!autowarefoundation)(?<!autowarefoundation/autoware_universe)#(\d+)
         replacement: tier4/autoware_universe#\1
+
+combined:
+  awf-combined-latest:
+    # Pending member commits are appended onto the published tip, ordered by
+    # committer date among themselves. Ties break on member order then original
+    # commit id. The result is a deterministic function of (published tip,
+    # member tips) and always fast-forwards.
+    order_by: committer_date
+    # Each member is filed under the name of its upstream, which keeps the two
+    # histories from sharing a directory and makes provenance visible in the
+    # path. Everything else at the root comes from autoware_universe.
+    # e2e is intentionally not a member.
+    members:
+      - source: autoware_universe
+        rename:
+          vehicle: universe/vehicle
+      - source: autoware_core
+        rename:
+          vehicle: core/vehicle
